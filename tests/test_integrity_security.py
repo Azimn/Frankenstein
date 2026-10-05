@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import sqlite3
 import tarfile
 import urllib.error
 import urllib.request
@@ -139,3 +140,11 @@ def test_api_event_endpoint(engine):
         assert engine.store.event(data["event_id"]) is not None
     finally:
         server.shutdown(); t.join(timeout=2)
+
+
+def test_store_connection_context_releases_handle(engine):
+    """The store context owns and closes its SQLite handle, including on Windows."""
+    with engine.store.connect() as conn:
+        assert conn.execute("SELECT 1").fetchone()[0] == 1
+    with pytest.raises(sqlite3.ProgrammingError):
+        conn.execute("SELECT 1")

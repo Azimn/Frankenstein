@@ -164,6 +164,23 @@ _ALLOWED_CANONICAL_AUTHORITIES: dict[str, set[str]] = {
 }
 
 
+class _ClosingConnection(sqlite3.Connection):
+    """SQLite connection whose context manager also releases the file handle.
+
+    sqlite3.Connection.__exit__ commits or rolls back but deliberately does not
+    close the connection. That is easy to miss on POSIX, where an open database
+    file may still be unlinked, and becomes a correctness bug on Windows.
+    Frankenstein treats the end of a ``with store.connect()`` block as the end
+    of ownership, so the connection must close there.
+    """
+
+    def __exit__(self, exc_type, exc, tb):
+        try:
+            return super().__exit__(exc_type, exc, tb)
+        finally:
+            self.close()
+
+
 class SQLiteStore:
     def __init__(self, path: str | Path):
         self.path = Path(path)
@@ -177,7 +194,7 @@ class SQLiteStore:
             conn.execute("INSERT OR IGNORE INTO meta(key,value) VALUES('projection_cursor','0')")
 
     def connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.path, timeout=30)
+        conn = sqlite3.connect(self.path, timeout=30, factory=_ClosingConnection)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA synchronous=FULL")
@@ -339,7 +356,7 @@ class SQLiteStore:
     def backup_to(self, target: str | Path) -> Path:
         target = Path(target)
         target.parent.mkdir(parents=True, exist_ok=True)
-        with self.connect() as src, sqlite3.connect(target) as dst:
+        with self.connect() as src, sqlite3.connect(target, factory=_ClosingConnection) as dst:
             src.backup(dst)
         return target
 

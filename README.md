@@ -14,11 +14,11 @@ This README is the canonical project specification, production plan, architectur
 
 Version `0.1.0` is the first production baseline. The local release candidate has passed the complete deterministic test suite, the end-to-end acceptance harness, package installation, CLI smoke testing, integrity verification, replay verification, backup and restore verification, Python 3.11 syntax parsing, multi-process writer testing, and scale probes described later in this document.
 
-The repository has a GitHub Actions matrix for Python 3.11, 3.12, and 3.13 on Windows, macOS, and Linux. That matrix is part of the release gate. Local verification was performed before publication. Cross-platform CI must also be green before a release tag is considered final.
+The repository has a GitHub Actions matrix for Python 3.11, 3.12, and 3.13 on Windows, macOS, and Linux. That matrix is part of the release gate. The first published matrix exposed a Windows-only SQLite handle-lifetime defect that Unix runners did not reveal; the storage connection contract was corrected and a regression now verifies that context-managed database handles are actually closed. Cross-platform CI must be green before a release tag is considered final.
 
 | Verification area | Current local result |
 | --- | --- |
-| Deterministic tests | 50 passed |
+| Deterministic tests | 51 passed |
 | End-to-end acceptance probes | 15 passed |
 | Python 3.11 grammar compatibility | Passed across source and tests |
 | Editable package installation | Passed |
